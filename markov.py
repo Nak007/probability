@@ -75,3 +75,280 @@ def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
     else: v = (np.identity(len(v))*v)**(n_steps)
     p = np.round(u.dot(v).dot(np.linalg.inv(u)).real,decimal)
     return dict(p=p,u=np.dot(u0,p))
+
+def mean_first_passage_time(p, n_state=None, decimal=2):
+    
+    '''
+    * * Mean First Passage Time * *
+    If an ergodic Markov chain is started in state s(i), the 
+    expected number of steps to reach state s(j) for the
+    first time is called the mean first passage time from 
+    s(i) to s(j). It is defined as
+    
+            m(i,j) = 1 + SUM(p(i,k) * m(k,j) | k<>j)    
+    
+    Alternatively, above equation can be expressed as:
+            
+            E[min{n>=0 such that s(n)=s(j)} | s(0)=s(i)]
+            
+    Parameters
+    ----------
+    p : array of float, of shape (n_transitons, n_transitons)
+    \t Transition probabilities matrix from (i) to (j), 
+    \t where (i) and (j) are row and column, respectively
+    
+    n_state : float, optional, (default:1)
+    \t It is a state expected to reach for the first time. 
+    \t This ergodic chain shall be made into an absorbing 
+    \t chain by making "n_state" an absorbing state. If None,
+    \t the mean first passage matrix is calculated, where all 
+    \t the diagonal entries are 0. 
+    
+    decimal : int, optional, (default:2)
+    \t Decimal places
+    
+    Returns
+    -------
+    If n_state is not None, then function reutrns dictionary 
+    of expected number of steps, denoted by u(i,j) e.g. u(1,3) 
+    meaning expected time from state 1 to state 3, otherwise 
+    returns mean first passage matrix. Also, an array of all
+    state s(i).
+    
+    References
+    ----------
+    Introduction to Probability by Joseph K. Blitzstein, 
+    Jessica Hwang, Chapter 11
+    
+    Example
+    -------                       
+    >>> p = np.array([[0.  , 1.  , 0.  , 0.  , 0.  ],
+                      [0.25, 0.  , 0.75, 0.  , 0.  ],
+                      [0.  , 0.5 , 0.  , 0.5 , 0.  ],
+                      [0.  , 0.  , 0.75, 0.  , 0.25],
+                      [0.  , 0.  , 0.  , 1.  , 0.  ]])
+    >>> mean_first_passage_time(p,5)
+    Output:
+    ({'u(1,5)': 21.33, 'u(2,5)': 20.33, 
+      'u(3,5)': 18.67, 'u(4,5)': 15.0},
+     array([1, 2, 3, 4]))
+    >>> mean_first_passage_time(p)
+    Output:
+    array([[ 0.  ,  1.  ,  2.67,  6.33, 21.33],
+           [15.  ,  0.  ,  1.67,  5.33, 20.33],
+           [18.67,  3.67,  0.  ,  3.67, 18.67],
+           [20.33,  5.33,  1.67,  0.  , 15.  ],
+           [21.33,  6.33,  2.67,  1.  ,  0.  ]])
+    '''
+    # Nc = ((I - Q)^-1)c
+    if n_state != None:
+        p = p-np.identity(len(p))
+        index = np.arange(len(p))
+        index = index[index!=max(n_state-1,0)]
+        p = p[index,:][:,index]
+
+        # Eliminate rows with all zeros (absorbing)  
+        # This creates singular matric (non-inversible)
+        r = ((p==0).sum(axis=1)==len(p))
+        z = np.arange(len(p))[~(r)]
+        p = p[z,:][:,z]; index = index[z]
+
+        if len(p)>0:
+            x = np.full((len(p),1),-1)
+            m = np.round(np.dot(np.linalg.inv(p),x),decimal)
+            return dict(('u({},{})'.format(u,n_state),float(m[n]))
+                        for n,u in enumerate(index+1)), index+1
+        else: return None
+    else:
+        m = np.full(p.shape,0.0)
+        for j in np.arange(1,len(p)+1):
+            u, index = mean_first_passage_time(p,j)
+            for (i,v) in zip(index,u.values()):
+                m[i-1,j-1] = v
+        return m
+
+def mean_recurrence_time(p, decimal=2):
+    
+    '''
+    * * Mean Recurrence Time * *
+    Assume that we start in state s(i); consider the length of time
+    before we return to s(i) for the first time. It is clear that 
+    we must return, since we either stay at s(i) the first step or 
+    go to some other state s(j), and from any other state s(j), we 
+    will eventually reach s(i) because the chain is ergodic. It is
+    definded as:
+
+                    m(i) = 1 + SUM(p(i,k) * m(k,i))    
+          
+    Let us now define two matrices M and D. The ijth entry m(i,j) of 
+    M is the mean first passage time to go from s(i) to s(j) if i ̸= j; 
+    the diagonal entries are 0. The matrix M is called the mean first 
+    passage matrix. The matrix D is the matrix with all entries 0 
+    except the diagonal entries d(i,i) = ri. The matrix D is called 
+    the mean recurrence matrix. Let C be an r × r matrix with all 
+    entries 1. The matrix equation is:
+    
+                            M = PM - C - D
+                            
+    Thus, we obtain  
+    
+                           D = C - (I - P)M
+    
+    Alternatively, r(i) can be computed from 1/w(i), where w(i) is
+    a fixed probability of i
+            
+    Parameters
+    ----------
+    p : array of float, of shape (n_transitons, n_transitons)
+    \t Transition probabilities matrix from (i) to (j), 
+    \t where (i) and (j) are row and column, respectively
+    
+    decimal : int, optional, (default:2)
+    \t Decimal places 
+    
+    Returns
+    -------
+    dictionary of 
+    - Fixed probability vector r(i)
+    - Mean Recurrence Time w(i)
+    
+    References
+    ----------
+    Introduction to Probability by Joseph K. Blitzstein, 
+    Jessica Hwang, Chapter 11
+    
+    Example
+    -------
+    periodic matrix
+    >>> p = np.array([[  0,1/2,  0,  0,  0,1/2,  0,  0,  0],
+                      [1/3,  0,1/3,  0,1/3,  0,  0,  0,  0],
+                      [  0,1/2,  0,1/2,  0,  0,  0,  0,  0],
+                      [  0,  0,1/3,  0,1/3,  0,  0,  0,1/3],
+                      [  0,1/4,  0,1/4,  0,1/4,  0,1/4,  0],
+                      [1/3,  0,  0,  0,1/3,  0,1/3,  0,  0],
+                      [  0,  0,  0,  0,  0,1/2,  0,1/2,  0],
+                      [  0,  0,  0,  0,1/3,  0,1/3,  0,1/3],
+                      [  0,  0,  0,1/2,  0,  0,  0,1/2,  0]])
+    >>> mean_recurrence_time(p)
+    Output:
+    ({'w(1)': 0.08, 'w(2)': 0.12, 'w(3)': 0.08, 'w(4)': 0.12,
+      'w(5)': 0.17, 'w(6)': 0.12, 'w(7)': 0.08, 'w(8)': 0.12,
+      'w(9)': 0.08},
+     {'r(1)': 12.0, 'r(2)': 8.0, 'r(3)': 12.0, 'r(4)': 8.0,
+      'r(5)': 6.0, 'r(6)': 8.0, 'r(7)': 12.0, 'r(8)': 8.0,
+      'r(9)': 12.0})
+    '''
+    m = mean_first_passage_time(p)
+    c = np.full(m.shape,1)
+    i = np.identity(len(m))
+    d = (c-(i-p).dot(m))[i.astype(bool)]
+    r = dict(('r({})'.format(n),np.round(r,2)) for n,r in enumerate(d,1))
+    w = dict(('w({})'.format(n),np.round(w,2)) for n,w in enumerate(1/d,1))
+    return w,r
+
+def absorbing_chain(p, decimal=2):
+    
+    '''
+    * * Cononical Matrix * *
+    Renumber the states so that the transient states come 
+    first. If there are r absorbing states and t transient 
+    states, the transition matrix will have the following 
+    canonical form
+    
+                            ---------
+                            | Q | R |
+                        P = ---------
+                            | 0 | I |
+                            ---------
+    
+    where Here I is an r-by-r indentity matrix, 0 is an 
+    r-by-t zero matrix, R is a nonzero t-by-r matrix, and 
+    Q is an t-by-t matrix. The first t states are transient 
+    and the last r states are absorbing
+    
+    Parameters
+    ----------
+    p : array of float, of shape (n_trans, n_trans)
+    \t Transition probabilities matrix from (i) to (j), 
+    \t where (i) and (j) are row and column, respectively
+    
+    decimal : int, optional, (default:2)
+    \t Decimal places
+    
+    Returns
+    -------
+    dictionary of
+    - Transient Matrix (r-by-r)
+    - Absorbing Matrix (r-by-t)
+    - Cononical Matrix (n-by-n)
+    - Fundamental Matrix (r-by-r) - note (a)
+    - Time to Absorption (r) - note (b)
+    - Absorption Probabilities Matrix (r-by-r) - note (c)
+    - index
+    
+    Notes
+    -----
+    (a) The matrix N = (I − Q)−1 is called the fundamental 
+        matrix for P. The entry n(i)(j) of N gives the 
+        expected number of times that the process is in the 
+        transient state sj if it is started in the transient 
+        state si before being absorbed.
+    (b) Given that the chain starts in state si, what is the 
+        expected number of steps before the chain is absorbed?
+        t = Nc, where c is a column vector, whose entries 
+        are 1
+    (c) The probability that an absorbing chain will be 
+        absorbed in the absorbing state sj if it starts in the 
+        transient state si
+        
+    Example
+    -------
+    >>> p = np.array([[1. , 0. , 0. , 0. , 0. ],
+                      [0. , 0.6, 0.4, 0. , 0. ],
+                      [0.8, 0. , 0. , 0.2, 0. ],
+                      [0.5, 0.3, 0. , 0. , 0.2],
+                      [0. , 0. , 0. , 0. , 1. ]])
+    >>> absorbing_chain(p)
+    Output:
+    {'transient': array([[2.66, 1.06, 0.21],
+                         [0.16, 1.06, 0.21],
+                         [0.8 , 0.32, 1.06]]), 
+     'absorbing': array([[0. , 0. ],
+                         [0.8, 0. ],
+                         [0.5, 0.2]]), 
+     'cononical': array([[0.6, 0.4, 0. , 0. , 0. ],
+                         [0. , 0. , 0.2, 0.8, 0. ],
+                         [0.3, 0. , 0. , 0.5, 0.2],
+                         [0. , 0. , 0. , 1. , 0. ],
+                         [0. , 0. , 0. , 0. , 1. ]]), 
+     'fundamental': array([[2.66, 1.06, 0.21],
+                           [0.16, 1.06, 0.21],
+                           [0.8 , 0.32, 1.06]]), 
+     'time': array([[3.94],
+                    [1.44],
+                    [2.18]]), 
+     'absorption_p': aarray([[0.96, 0.04],
+                             [0.96, 0.04],
+                             [0.79, 0.21]]), 
+     'index': array([1, 2, 3, 0, 4])}
+    '''
+    diag = p[np.identity(len(p)).astype(bool)]
+    # t = trransient matrix, i = identitry matrix
+    t = np.arange(len(p))[diag!=1].ravel()
+    i = np.arange(len(p))[diag==1].ravel()
+    if len(i)>0:
+        index = np.hstack((t,i))
+        p = p[index,:][:,index]
+        q = p[:len(t),:len(t)] # transient matrix
+        r = p[:len(t),-len(i):] # absorbing matrix
+        n = np.linalg.inv(np.identity(len(q))-q)
+        t = np.dot(n,np.full((len(n),1),1))
+        a = np.dot(n,r)
+        return dict(transient=np.round(q,decimal), 
+                    absorbing=np.round(r,decimal),
+                    cononical=np.round(p,decimal), 
+                    fundamental=np.round(n,decimal), 
+                    time=np.round(t,decimal),
+                    absorption_p=np.round(a,decimal), 
+                    index=index)
+    return 'no absorbing state'
