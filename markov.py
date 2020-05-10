@@ -5,6 +5,7 @@ Methods
 (2) mean_first_passage_time
 (3) mean_recurrence_time
 (4) absorbing_chain
+(5) is_reversible
 '''
 import numpy as np
 
@@ -19,8 +20,8 @@ def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
                         u(n) = u(0)P^n
     
     Moreover, as "n" approaches infinity, P approaches a limiting 
-    matrix "W" with all rows the same vector "w" e.g. w = 
-    [w1, w2, ... wk] where k is number of transitions. The vector 
+    matrix "Π" with all rows the same vector "π" e.g. w = 
+    [π1, π2, ... πk] where k is number of transitions. The vector 
     w is a strictly positive probability vector. For P to possess 
     this property, it must be irreducible (recurrent) and regular,
     which is called ergodic.
@@ -49,7 +50,7 @@ def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
     -------
     dictionary of
     - Transition probabilities matrix (p)
-    - Fixed probability vector (u)
+    - Fixed probability vector (π)
     
     References
     ----------
@@ -85,7 +86,7 @@ def mean_first_passage_time(p, n_state=None, decimal=2):
     first time is called the mean first passage time from 
     s(i) to s(j). It is defined as
     
-            m(i,j) = 1 + SUM(p(i,k) * m(k,j) | k<>j)    
+            m(i,j) = 1 + ∑( p(i,k) * m(k,j) | k ≠ j )
     
     Alternatively, above equation can be expressed as:
             
@@ -178,7 +179,7 @@ def mean_recurrence_time(p, decimal=2):
     will eventually reach s(i) because the chain is ergodic. It is
     definded as:
 
-                    m(i) = 1 + SUM(p(i,k) * m(k,i))    
+                   m(i) = 1 + ∑( p(i,k) * m(k,i) | k ∈ S)
           
     Let us now define two matrices M and D. The ijth entry m(i,j) of 
     M is the mean first passage time to go from s(i) to s(j) if i ̸= j; 
@@ -352,3 +353,60 @@ def absorbing_chain(p, decimal=2):
                     absorption_p=np.round(a,decimal), 
                     index=index)
     return 'no absorbing state'
+
+def is_reversible(p, decimal=2):
+    
+    '''
+    * * Reversiblility or Detailed Balance * *
+    A class of Markov processes is said to be reversible if, 
+    on every time interval, the distribution of the process 
+    is the same when it is run backward as when it is run 
+    forward. Reversibility is defined as:
+    
+                    π(i) * p(i,j) = π(j) * p(j,i) 
+    
+    where all i,j ∈ S
+
+    Parameters
+    ----------
+    p : array of float, of shape (n_transitons, n_transitons)
+    \t Transition probabilities matrix from (i) to (j), 
+    \t where (i) and (j) are row and column, respectively
+    
+    decimal : int, optional, (default:2)
+    \t Decimal places
+    
+    Returns
+    -------
+    dictionary of
+    - Matrix of π(i) * p(i,j) of all i,j ∈ S
+    - Reversibility (bool)
+    
+    Example
+    -------
+    Reversible
+    >>> p = np.array([[0.5  , 0.25 , 0.25 ],
+                      [0.3  , 0.4  , 0.3  ],
+                      [0.125, 0.125, 0.75 ]])
+    >>> is_reversible(p, decimal=3)
+    Output:
+    {'p': array([[0.13 , 0.065, 0.065],
+                 [0.065, 0.087, 0.065],
+                 [0.065, 0.065, 0.392]]), 
+     'reversible': True}
+     
+    Irreversible
+    >>> p = np.array([[0. , 0.8, 0.2],
+                      [0.2, 0. , 0.8],
+                      [0.8, 0.2, 0. ]])
+    >>> is_reversible(p)
+    Output:
+    {'p': array([[0.  , 0.26, 0.07],
+                 [0.07, 0.  , 0.26],
+                 [0.26, 0.07, 0.  ]]), 
+     'reversible': False}
+    '''
+    u = markov_chains(p, decimal=decimal)['u']
+    u = np.identity(len(p)) * u
+    k = np.round(p.T.dot(u).T, decimal)
+    return dict(p=k,reversible=(k==k.T).sum()==p.size)
