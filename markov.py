@@ -210,8 +210,8 @@ def mean_recurrence_time(p, decimal=2):
     Returns
     -------
     dictionary of 
-    - Fixed probability vector r(i)
-    - Mean Recurrence Time w(i)
+    - Fixed probability vector w(i)
+    - Mean Recurrence Time r(i)
     
     References
     ----------
