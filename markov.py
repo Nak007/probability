@@ -1,13 +1,16 @@
 '''
-Methods
--------
-(1) markov_chains
-(2) mean_first_passage_time
-(3) mean_recurrence_time
-(4) absorbing_chain
-(5) is_reversible
+Available methods are the followings:
+[1] markov_chains
+[2] mean_first_passage_time
+[3] mean_recurrence_time
+[4] absorbing_chain
+[5] is_reversible
+
+Authors: Danusorn Sitdhirasdr <danusorn.si@gmail.com>
+versionadded:: 08-09-2020
 '''
-import numpy as np
+from warnings import warn
+import numbers, numpy as np
 
 def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
 
@@ -25,6 +28,8 @@ def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
     w is a strictly positive probability vector. For P to possess 
     this property, it must be irreducible (recurrent) and regular,
     which is called ergodic.
+    
+    .. versionadded:: 08-09-2020
     
     Parameters
     ---------- 
@@ -80,7 +85,8 @@ def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
 def mean_first_passage_time(p, n_state=None, decimal=2):
     
     '''
-    * * Mean First Passage Time * *
+    ** Mean First Passage Time **
+    
     If an ergodic Markov chain is started in state s(i), the 
     expected number of steps to reach state s(j) for the
     first time is called the mean first passage time from 
@@ -91,7 +97,9 @@ def mean_first_passage_time(p, n_state=None, decimal=2):
     Alternatively, above equation can be expressed as:
             
             E[min{n>=0 such that s(n)=s(j)} | s(0)=s(i)]
-            
+    
+    .. versionadded:: 08-09-2020
+    
     Parameters
     ----------
     p : array of float, of shape (n_transitons, n_transitons)
@@ -167,11 +175,12 @@ def mean_first_passage_time(p, n_state=None, decimal=2):
             for (i,v) in zip(index,u.values()):
                 m[i-1,j-1] = v
         return m
-
+ 
 def mean_recurrence_time(p, decimal=2):
     
     '''
-    * * Mean Recurrence Time * *
+    ** Mean Recurrence Time **
+    
     Assume that we start in state s(i); consider the length of time
     before we return to s(i) for the first time. It is clear that 
     we must return, since we either stay at s(i) the first step or 
@@ -197,7 +206,9 @@ def mean_recurrence_time(p, decimal=2):
     
     Alternatively, r(i) can be computed from 1/w(i), where w(i) is
     a fixed probability of i
-            
+    
+    .. versionadded:: 08-09-2020
+    
     Parameters
     ----------
     p : array of float, of shape (n_transitons, n_transitons)
@@ -250,7 +261,8 @@ def mean_recurrence_time(p, decimal=2):
 def absorbing_chain(p, decimal=2):
     
     '''
-    * * Cononical Matrix * *
+    ** Cononical Matrix **
+    
     Renumber the states so that the transient states come 
     first. If there are r absorbing states and t transient 
     states, the transition matrix will have the following 
@@ -275,6 +287,8 @@ def absorbing_chain(p, decimal=2):
     
     decimal : int, optional, (default:2)
     \t Decimal places
+    
+    .. versionadded:: 08-09-2020
     
     Returns
     -------
@@ -311,9 +325,9 @@ def absorbing_chain(p, decimal=2):
                       [0. , 0. , 0. , 0. , 1. ]])
     >>> absorbing_chain(p)
     Output:
-    {'transient': array([[2.66, 1.06, 0.21],
-                         [0.16, 1.06, 0.21],
-                         [0.8 , 0.32, 1.06]]), 
+    {'transient': array([[0.6, 0.4, 0. ],
+                         [0. , 0. , 0.2],
+                         [0.3, 0. , 0. ]]]), 
      'absorbing': array([[0. , 0. ],
                          [0.8, 0. ],
                          [0.5, 0.2]]), 
@@ -357,7 +371,8 @@ def absorbing_chain(p, decimal=2):
 def is_reversible(p, decimal=2):
     
     '''
-    * * Reversiblility or Detailed Balance * *
+    ** Reversiblility or Detailed Balance **
+    
     A class of Markov processes is said to be reversible if, 
     on every time interval, the distribution of the process 
     is the same when it is run backward as when it is run 
@@ -366,7 +381,9 @@ def is_reversible(p, decimal=2):
                     π(i) * p(i,j) = π(j) * p(j,i) 
     
     where all i,j ∈ S
-
+    
+    .. versionadded:: 08-09-2020
+    
     Parameters
     ----------
     p : array of float, of shape (n_transitons, n_transitons)
