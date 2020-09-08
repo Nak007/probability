@@ -10,7 +10,10 @@ Authors: Danusorn Sitdhirasdr <danusorn.si@gmail.com>
 versionadded:: 08-09-2020
 '''
 from warnings import warn
-import numbers, numpy as np
+import numpy as np
+
+__all__ = ['markov_chains','mean_first_passage_time',
+           'mean_recurrence_time','absorbing_chain','is_reversible']
 
 def markov_chains(p, u=None, n_steps=float('Inf'), decimal=2) :
 
